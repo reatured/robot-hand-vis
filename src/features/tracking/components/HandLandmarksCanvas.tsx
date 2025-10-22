@@ -4,23 +4,13 @@ import { useEffect, useRef } from 'react'
 import type { HandTrackingResult } from '../types'
 import { HAND_CONNECTIONS } from '../types'
 
-interface LandmarkOverlayProps {
+interface HandLandmarksCanvasProps {
   width: number
   height: number
   results: HandTrackingResult[]
-  showConfidence?: boolean
-  showFPS?: boolean
-  fps?: number
 }
 
-export function LandmarkOverlay({
-  width,
-  height,
-  results,
-  showConfidence = true,
-  showFPS = true,
-  fps = 0,
-}: LandmarkOverlayProps) {
+export function HandLandmarksCanvas({ width, height, results }: HandLandmarksCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -37,12 +27,7 @@ export function LandmarkOverlay({
     results.forEach((result) => {
       drawHand(ctx, result, width, height)
     })
-
-    // Draw UI overlays
-    if (showFPS || showConfidence) {
-      drawInfo(ctx, results, fps, showFPS, showConfidence)
-    }
-  }, [results, width, height, fps, showFPS, showConfidence])
+  }, [results, width, height])
 
   return (
     <canvas
@@ -50,9 +35,6 @@ export function LandmarkOverlay({
       width={width}
       height={height}
       className="absolute inset-0 pointer-events-none"
-      style={{
-        transform: 'scaleX(-1)', // Mirror to match video
-      }}
     />
   )
 }
@@ -111,56 +93,6 @@ function drawHand(
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 1
       ctx.stroke()
-
-      // Draw index numbers for debugging (optional)
-      if (false) {
-        // Set to true to show landmark indices
-        ctx.fillStyle = '#ffffff'
-        ctx.font = '10px monospace'
-        ctx.fillText(String(index), x + 8, y - 8)
-      }
     })
-  }
-}
-
-/**
- * Draw info overlay (FPS, confidence)
- */
-function drawInfo(
-  ctx: CanvasRenderingContext2D,
-  results: HandTrackingResult[],
-  fps: number,
-  showFPS: boolean,
-  showConfidence: boolean,
-) {
-  const padding = 8
-  let yOffset = padding
-
-  // Setup text style
-  ctx.font = '12px monospace'
-  ctx.textAlign = 'left'
-
-  // Draw FPS
-  if (showFPS) {
-    ctx.fillStyle = fps > 20 ? '#00ff88' : '#ff8800'
-    ctx.fillText(`FPS: ${fps.toFixed(0)}`, padding, yOffset + 12)
-    yOffset += 20
-  }
-
-  // Draw confidence for each hand
-  if (showConfidence && results.length > 0) {
-    results.forEach((result) => {
-      const confidencePercent = (result.score * 100).toFixed(0)
-      const color = result.score > 0.7 ? '#00ff88' : '#ff8800'
-      ctx.fillStyle = color
-      ctx.fillText(`${result.handedness}: ${confidencePercent}%`, padding, yOffset + 12)
-      yOffset += 20
-    })
-  }
-
-  // Draw "No hands detected" if no results
-  if (results.length === 0) {
-    ctx.fillStyle = '#ffffff80'
-    ctx.fillText('No hands detected', padding, yOffset + 12)
   }
 }

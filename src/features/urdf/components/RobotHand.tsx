@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { loadURDF } from '../core/loader'
+import { parseUrdfJoints } from '../core/parseUrdf'
+import { useStore } from '@/store'
 
 interface RobotHandProps {
   /** Model ID to load (defaults to linker-l10-right) */
@@ -26,6 +28,9 @@ export function RobotHand({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const groupRef = useRef<THREE.Group>(null)
+
+  // Get store actions
+  const setJoints = useStore((state) => (state as any).setJoints)
 
   useEffect(() => {
     let mounted = true
@@ -50,6 +55,14 @@ export function RobotHand({
         if (!mounted) return
 
         console.log('URDF model loaded successfully', loadedRobot)
+
+        // Parse joint information from the loaded robot
+        const parsedData = parseUrdfJoints(loadedRobot, modelId)
+        console.log(`Parsed ${parsedData.joints.length} joints from URDF`)
+
+        // Store joints in Zustand for inspector
+        setJoints(parsedData.joints)
+
         setRobot(loadedRobot)
         setLoading(false)
       } catch (err) {

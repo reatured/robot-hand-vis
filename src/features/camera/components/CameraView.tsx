@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useHandTracking } from '../../tracking/hooks/useHandTracking'
-import { LandmarkOverlay } from '../../tracking/components/LandmarkOverlay'
+import { HandLandmarksCanvas } from '../../tracking/components/HandLandmarksCanvas'
+import { TrackingInfoOverlay } from '../../tracking/components/TrackingInfoOverlay'
 
 interface CameraViewProps {
   width?: number
@@ -108,25 +109,25 @@ export function CameraView({
         </div>
       )}
 
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-full h-full object-cover"
-        style={{ transform: 'scaleX(-1)' }} // Mirror the video
-      />
-
-      {/* Hand tracking overlay */}
-      {enableTracking && isTracking && (
-        <LandmarkOverlay
-          width={width}
-          height={height}
-          results={results}
-          showConfidence={true}
-          showFPS={true}
-          fps={fps}
+      {/* Mirrored container: video + hand landmarks together */}
+      <div className="relative w-full h-full" style={{ transform: 'scaleX(-1)' }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover"
         />
+
+        {/* Hand tracking landmarks (inside mirrored container) */}
+        {enableTracking && isTracking && (
+          <HandLandmarksCanvas width={width} height={height} results={results} />
+        )}
+      </div>
+
+      {/* Text info overlay (outside mirrored container, not mirrored) */}
+      {enableTracking && isTracking && (
+        <TrackingInfoOverlay results={results} fps={fps} showFPS={true} showConfidence={true} />
       )}
     </div>
   )

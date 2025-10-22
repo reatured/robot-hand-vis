@@ -10,6 +10,8 @@ export { HandTracker } from './core/handTracker'
 
 // Components
 export { LandmarkOverlay } from './components/LandmarkOverlay'
+export { HandLandmarksCanvas } from './components/HandLandmarksCanvas'
+export { TrackingInfoOverlay } from './components/TrackingInfoOverlay'
 
 // Hooks
 export { useHandTracking } from './hooks/useHandTracking'

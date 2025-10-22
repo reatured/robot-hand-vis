@@ -2,6 +2,7 @@
 
 import { OrbitControls, Grid } from '@react-three/drei'
 import { RobotHand } from '@/features/urdf/components/RobotHand'
+import { DebugAxes } from '@/features/debug/components/DebugAxes'
 
 export function RobotScene() {
   return (
@@ -34,6 +35,9 @@ export function RobotScene() {
         position={[0, 0.5, 0]}
         rotation={[0, 0, 0]}
       />
+
+      {/* Debug Axes Visualization */}
+      <DebugAxes />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls

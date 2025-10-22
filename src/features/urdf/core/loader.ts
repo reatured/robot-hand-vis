@@ -7,7 +7,7 @@
 
 import URDFLoader from 'urdf-loader'
 import * as THREE from 'three'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+import { STLLoader } from 'three-stdlib'
 
 export interface URDFLoadOptions {
   /** Scale factor for the model */

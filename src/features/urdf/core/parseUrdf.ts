@@ -72,9 +72,16 @@ function extractJointInfo(object: THREE.Object3D): UrdfJointInfo | null {
   // Get current angle/position (default to 0)
   const currentAngle = joint.angle ?? 0
 
-  // Get world position
-  const position = new THREE.Vector3()
-  object.getWorldPosition(position)
+  // Get LOCAL position (relative to parent) - this is the joint origin from URDF
+  // NOT world position, so skeleton data is independent of root transforms
+  const position = object.position.clone()
+
+  // Get LOCAL rotation as quaternion
+  const rotation = object.quaternion.clone()
+
+  // Also store world position for initial reference (used by palm metrics)
+  const worldPosition = new THREE.Vector3()
+  object.getWorldPosition(worldPosition)
 
   // Get parent and child link names
   const parentLink = joint.parent?.name || 'unknown_parent'
@@ -86,7 +93,9 @@ function extractJointInfo(object: THREE.Object3D): UrdfJointInfo | null {
     axis,
     limits,
     currentAngle,
-    position,
+    position, // LOCAL position
+    rotation, // LOCAL rotation
+    worldPosition, // World position at load time (for palm metrics calculation)
     parentLink,
     childLink,
     object3D: object,

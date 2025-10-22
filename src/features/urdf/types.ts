@@ -38,8 +38,14 @@ export interface UrdfJointInfo {
   /** Current joint angle (radians) or position (meters) */
   currentAngle: number
 
-  /** Joint origin position in world coordinates */
+  /** Local position (relative to parent) from URDF joint origin */
   position: THREE.Vector3
+
+  /** Local rotation (relative to parent) */
+  rotation: THREE.Quaternion
+
+  /** World position at load time (for palm metrics calculation) */
+  worldPosition: THREE.Vector3
 
   /** Parent link name */
   parentLink: string
@@ -63,4 +69,68 @@ export interface ParsedUrdfData {
 
   /** Root Three.js object */
   rootObject: THREE.Group
+}
+
+/**
+ * Skeleton joint data - single source of truth for joint transforms
+ * Stores LOCAL transforms (relative to parent), world positions computed dynamically
+ */
+export interface SkeletonJoint {
+  /** Joint name */
+  name: string
+
+  /** LOCAL position (relative to parent) - single source of truth */
+  position: THREE.Vector3
+
+  /** LOCAL rotation quaternion (relative to parent) - single source of truth */
+  rotation: THREE.Quaternion
+
+  /** Parent joint name (null for root) */
+  parentName: string | null
+
+  /** Joint type */
+  type: JointType
+
+  /** Reference to the Three.js Object3D (for syncing model) */
+  object3D?: THREE.Object3D
+}
+
+/**
+ * Palm dimensions calculated from model
+ */
+export interface PalmDimensions {
+  /** Palm width (index to pinky base distance) */
+  width: number
+
+  /** Palm length (wrist to middle finger base distance) */
+  length: number
+
+  /** Wrist position */
+  wristPosition: THREE.Vector3
+
+  /** Base joint positions for each finger */
+  baseJoints: {
+    thumb?: THREE.Vector3
+    index?: THREE.Vector3
+    middle?: THREE.Vector3
+    ring?: THREE.Vector3
+    pinky?: THREE.Vector3
+  }
+}
+
+/**
+ * Complete skeleton data - single source of truth for robot state
+ */
+export interface RobotSkeletonData {
+  /** All skeleton joints */
+  joints: SkeletonJoint[]
+
+  /** Palm dimensions */
+  palmDimensions: PalmDimensions
+
+  /** Root position */
+  rootPosition: THREE.Vector3
+
+  /** Root rotation */
+  rootRotation: THREE.Euler
 }

@@ -87,7 +87,8 @@ export async function loadURDF(
           }
         })
 
-        resolve(robot)
+        // URDFRobot extends Object3D and can be used as a Group
+        resolve(robot as unknown as THREE.Group)
       },
       undefined,
       (error) => {

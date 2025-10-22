@@ -1,8 +1,7 @@
 'use client'
 
 import { OrbitControls, Grid } from '@react-three/drei'
-import { RobotHand } from '@/features/urdf/components/RobotHand'
-import { DebugAxes } from '@/features/debug/components/DebugAxes'
+import { RobotHandInterface } from '@/features/urdf/components/RobotHandInterface'
 
 export function RobotScene() {
   return (
@@ -28,16 +27,13 @@ export function RobotScene() {
         infiniteGrid={false}
       />
 
-      {/* Robot Hand - Linker L10 Right */}
-      <RobotHand
+      {/* Robot Hand Interface - Linker L10 Right with Skeleton Overlay */}
+      <RobotHandInterface
         modelId="linker-l10-right"
         scale={5}
         position={[0, 0.5, 0]}
         rotation={[0, 0, 0]}
       />
-
-      {/* Debug Axes Visualization */}
-      <DebugAxes />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls

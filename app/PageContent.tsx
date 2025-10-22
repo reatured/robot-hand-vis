@@ -40,15 +40,7 @@ export default function PageContent() {
         <Inspector />
       </Suspense>
 
-      {/* UI Overlay - Optional info panel */}
-      <div className="fixed bottom-4 left-4 z-40 bg-black/50 text-white p-4 rounded-lg text-sm backdrop-blur-sm">
-        <div className="font-bold mb-2">Robot Hand Visualization</div>
-        <div className="text-xs opacity-80">
-          <div>• Camera: Top left</div>
-          <div>• 3D Scene: Interactive (drag to rotate)</div>
-          <div>• Grid: 20x20 units</div>
-        </div>
-      </div>
+
     </div>
   )
 }

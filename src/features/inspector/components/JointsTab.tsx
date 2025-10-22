@@ -145,6 +145,17 @@ function SelectedJointDetails({ joint }: SelectedJointDetailsProps) {
 
   const angleDeg = (joint.currentAngle * 180 / Math.PI).toFixed(1)
 
+  // Animation state
+  const startJointAnimDemo = useStore((state) => (state as any).startJointAnimDemo)
+  const isJointAnimating = useStore((state) => (state as any).isJointAnimating)
+  const isAnimating = isJointAnimating?.(joint.name) || false
+
+  const handleTestMotion = () => {
+    if (!isAnimating) {
+      startJointAnimDemo(joint.name, joint.currentAngle)
+    }
+  }
+
   return (
     <div className="border-t border-gray-700 pt-4">
       <h4 className="text-sm font-semibold text-white mb-3">Joint Details</h4>
@@ -166,6 +177,26 @@ function SelectedJointDetails({ joint }: SelectedJointDetailsProps) {
         )}
         <DetailRow label="Parent" value={joint.parentLink} />
         <DetailRow label="Child" value={joint.childLink} />
+      </div>
+
+      {/* Test Motion Button */}
+      <div className="mt-4">
+        <button
+          onClick={handleTestMotion}
+          disabled={isAnimating}
+          className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors ${
+            isAnimating
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+          }`}
+        >
+          {isAnimating ? '⏸ Testing Motion...' : '▶ Test Joint Motion'}
+        </button>
+        {isAnimating && (
+          <div className="mt-2 text-xs text-center text-gray-400">
+            Animating: 0° → Lower → Upper → 0°
+          </div>
+        )}
       </div>
     </div>
   )

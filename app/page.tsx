@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 
 // Dynamic imports to avoid SSR issues with WebGL and camera
-const SceneCanvas = dynamic(() => import('@/components/scene/SceneCanvas').then((mod) => mod.SceneCanvas), {
+// Using barrel exports from @/components for clean imports
+const Scene = dynamic(() => import('@/components').then((mod) => mod.Scene), {
   ssr: false,
   loading: () => (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-900">
@@ -13,7 +14,7 @@ const SceneCanvas = dynamic(() => import('@/components/scene/SceneCanvas').then(
   ),
 })
 
-const CameraView = dynamic(() => import('@/components/camera/CameraView').then((mod) => mod.CameraView), {
+const Camera = dynamic(() => import('@/components').then((mod) => mod.Camera), {
   ssr: false,
 })
 
@@ -22,12 +23,12 @@ export default function Page() {
     <div className="relative w-screen h-screen overflow-hidden">
       {/* 3D Scene - Full screen background */}
       <Suspense fallback={null}>
-        <SceneCanvas />
+        <Scene />
       </Suspense>
 
       {/* Camera View - Top left overlay */}
       <Suspense fallback={null}>
-        <CameraView width={320} height={240} />
+        <Camera width={320} height={240} />
       </Suspense>
 
       {/* UI Overlay - Optional info panel */}

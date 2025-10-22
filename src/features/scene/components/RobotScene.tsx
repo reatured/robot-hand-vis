@@ -1,18 +1,16 @@
 'use client'
 
 import { OrbitControls, Grid } from '@react-three/drei'
-import { useRef } from 'react'
-import * as THREE from 'three'
+import { RobotHand } from '@/features/urdf/components/RobotHand'
 
 export function RobotScene() {
-  const meshRef = useRef<THREE.Mesh>(null)
-
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-      <directionalLight position={[-10, -10, -5]} intensity={0.3} />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 5, 5]} intensity={1.2} castShadow />
+      <directionalLight position={[-5, 3, -5]} intensity={0.5} />
+      <directionalLight position={[0, -5, 0]} intensity={0.3} />
 
       {/* Grid helper for ground reference */}
       <Grid
@@ -29,11 +27,13 @@ export function RobotScene() {
         infiniteGrid={false}
       />
 
-      {/* Test cube - placeholder for robot hand */}
-      <mesh ref={meshRef} position={[0, 1, 0]} castShadow>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#3b82f6" />
-      </mesh>
+      {/* Robot Hand - Linker L10 Right */}
+      <RobotHand
+        modelId="linker-l10-right"
+        scale={5}
+        position={[0, 0.5, 0]}
+        rotation={[0, 0, 0]}
+      />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls
@@ -42,7 +42,7 @@ export function RobotScene() {
         maxPolarAngle={Math.PI / 2}
         enableDamping
         dampingFactor={0.05}
-        target={[0, 1, 0]}
+        target={[0, 0.5, 0]}
       />
     </>
   )

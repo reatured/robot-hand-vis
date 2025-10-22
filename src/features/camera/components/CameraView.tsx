@@ -1,18 +1,36 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useHandTracking } from '../../tracking/hooks/useHandTracking'
+import { LandmarkOverlay } from '../../tracking/components/LandmarkOverlay'
 
 interface CameraViewProps {
   width?: number
   height?: number
   className?: string
+  enableTracking?: boolean
 }
 
-export function CameraView({ width = 320, height = 240, className = '' }: CameraViewProps) {
+export function CameraView({
+  width = 320,
+  height = 240,
+  className = '',
+  enableTracking = true,
+}: CameraViewProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [stream, setStream] = useState<MediaStream | null>(null)
+
+  // Hand tracking
+  const { results, isTracking, error: trackingError, fps } = useHandTracking(videoRef, {
+    enabled: enableTracking,
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+    filterAlpha: 0.5,
+  })
 
   useEffect(() => {
     let mounted = true
@@ -84,6 +102,12 @@ export function CameraView({ width = 320, height = 240, className = '' }: Camera
         </div>
       )}
 
+      {trackingError && (
+        <div className="absolute top-0 left-0 right-0 bg-orange-900 text-white p-2 text-xs text-center">
+          Tracking: {trackingError}
+        </div>
+      )}
+
       <video
         ref={videoRef}
         autoPlay
@@ -92,6 +116,18 @@ export function CameraView({ width = 320, height = 240, className = '' }: Camera
         className="w-full h-full object-cover"
         style={{ transform: 'scaleX(-1)' }} // Mirror the video
       />
+
+      {/* Hand tracking overlay */}
+      {enableTracking && isTracking && (
+        <LandmarkOverlay
+          width={width}
+          height={height}
+          results={results}
+          showConfidence={true}
+          showFPS={true}
+          fps={fps}
+        />
+      )}
     </div>
   )
 }

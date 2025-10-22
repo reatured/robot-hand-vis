@@ -20,7 +20,11 @@
       "Bash(src/shared/utils/.gitkeep )",
       "Bash(src/shared/types/.gitkeep )",
       "Bash(src/config/.gitkeep )",
-      "Bash(public/assets/manifests/.gitkeep)"
+      "Bash(public/assets/manifests/.gitkeep)",
+      "Bash(for dir in /Users/lingyizhou/Documents/Personal Work/2025/10月Artly/robot-hand-vis/src/features/*/)",
+      "Bash(ls:*)",
+      "Bash(awk:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

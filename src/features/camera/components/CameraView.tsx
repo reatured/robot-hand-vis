@@ -22,6 +22,7 @@ export function CameraView({
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [swapLabels, setSwapLabels] = useState(false)
 
   // Hand tracking
   const { results, isTracking, error: trackingError, fps } = useHandTracking(videoRef, {
@@ -127,7 +128,26 @@ export function CameraView({
 
       {/* Text info overlay (outside mirrored container, not mirrored) */}
       {enableTracking && isTracking && (
-        <TrackingInfoOverlay results={results} fps={fps} showFPS={true} showConfidence={true} />
+        <TrackingInfoOverlay
+          results={results}
+          fps={fps}
+          width={width}
+          height={height}
+          swapLabels={swapLabels}
+          showFPS={true}
+          showConfidence={true}
+        />
+      )}
+
+      {/* Swap labels button (bottom-right, outside mirrored container) */}
+      {enableTracking && isTracking && results.length > 0 && (
+        <button
+          onClick={() => setSwapLabels(!swapLabels)}
+          className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded text-xs font-mono transition-colors border border-white/20"
+          title="Swap Left/Right labels"
+        >
+          ⇄ Swap
+        </button>
       )}
     </div>
   )

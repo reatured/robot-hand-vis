@@ -12,9 +12,9 @@ import { useStore } from '@/store'
 import { getJointTypeColor, getJointFinger } from '../../urdf/core/parseUrdf'
 import { UrdfJointInfo } from '../../urdf/types'
 
-const AXIS_LENGTH = 0.05 // 5cm arrow length
-const AXIS_HEAD_LENGTH = 0.015 // 1.5cm arrow head
-const AXIS_HEAD_WIDTH = 0.01 // 1cm arrow head width
+const AXIS_LENGTH = 0.15 // 15cm arrow length (3x larger for better visibility)
+const AXIS_HEAD_LENGTH = 0.045 // 4.5cm arrow head (3x larger)
+const AXIS_HEAD_WIDTH = 0.03 // 3cm arrow head width (3x larger)
 
 export function DebugAxes() {
   // Get state from store
@@ -48,7 +48,7 @@ export function DebugAxes() {
   }
 
   return (
-    <group>
+    <group renderOrder={999}>
       {filteredJoints.map((joint: UrdfJointInfo) => (
         <JointAxisVisualizer
           key={joint.name}
@@ -84,7 +84,7 @@ function JointAxisVisualizer({ joint, isSelected }: JointAxisVisualizerProps) {
   // Label position (slightly offset from arrow tip)
   const labelPosition = useMemo(() => {
     const pos = arrow.origin.clone()
-    pos.add(arrow.direction.clone().multiplyScalar(arrow.length + 0.02))
+    pos.add(arrow.direction.clone().multiplyScalar(arrow.length + 0.05))
     return pos
   }, [arrow])
 
@@ -93,38 +93,97 @@ function JointAxisVisualizer({ joint, isSelected }: JointAxisVisualizerProps) {
 
   return (
     <group>
-      {/* Arrow showing rotation axis */}
-      <arrowHelper
-        args={[
-          arrow.direction,
-          arrow.origin,
-          arrow.length,
-          arrow.color,
-          AXIS_HEAD_LENGTH * (isSelected ? 1.5 : 1),
-          AXIS_HEAD_WIDTH * (isSelected ? 1.5 : 1),
-        ]}
+      {/* Custom Arrow showing rotation axis - Always on top */}
+      <CustomArrow
+        origin={arrow.origin}
+        direction={arrow.direction}
+        length={arrow.length}
+        color={arrow.color}
+        headLength={AXIS_HEAD_LENGTH * (isSelected ? 1.5 : 1)}
+        headWidth={AXIS_HEAD_WIDTH * (isSelected ? 0.5 : 0.25)}
       />
 
-      {/* Joint name and angle label */}
+      {/* Joint name and angle label - Always on top */}
       <Text
         position={labelPosition}
-        fontSize={0.008}
+        fontSize={0.025}
         color={isSelected ? '#ffff00' : '#ffffff'}
         anchorX="center"
         anchorY="middle"
-        outlineWidth={0.001}
+        outlineWidth={0.003}
         outlineColor="#000000"
+        renderOrder={1000}
+        material-depthTest={false}
       >
         {angleText}
       </Text>
 
-      {/* Optional: Small sphere at joint origin for selected joint */}
+      {/* Optional: Small sphere at joint origin for selected joint - Always on top */}
       {isSelected && (
-        <mesh position={arrow.origin}>
-          <sphereGeometry args={[0.005, 8, 8]} />
-          <meshBasicMaterial color={0xffff00} />
+        <mesh position={arrow.origin} renderOrder={1000}>
+          <sphereGeometry args={[0.015, 16, 16]} />
+          <meshBasicMaterial color={0xffff00} depthTest={false} />
         </mesh>
       )}
+    </group>
+  )
+}
+
+/**
+ * Custom Arrow Component
+ * Renders an arrow with shaft and cone head, always on top of other objects
+ */
+interface CustomArrowProps {
+  origin: THREE.Vector3
+  direction: THREE.Vector3
+  length: number
+  color: number
+  headLength: number
+  headWidth: number
+}
+
+function CustomArrow({ origin, direction, length, color, headLength, headWidth }: CustomArrowProps) {
+  // Calculate arrow end point
+  const endPoint = useMemo(() => {
+    return origin.clone().add(direction.clone().multiplyScalar(length - headLength))
+  }, [origin, direction, length, headLength])
+
+  // Calculate cone head position and rotation
+  const headPosition = useMemo(() => {
+    return origin.clone().add(direction.clone().multiplyScalar(length - headLength / 2))
+  }, [origin, direction, length, headLength])
+
+  // Calculate rotation quaternion to align cone with direction
+  const headRotation = useMemo(() => {
+    const quaternion = new THREE.Quaternion()
+    const up = new THREE.Vector3(0, 1, 0)
+    quaternion.setFromUnitVectors(up, direction)
+    return quaternion
+  }, [direction])
+
+  return (
+    <group>
+      {/* Arrow shaft (line) */}
+      <line renderOrder={1000}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={2}
+            array={new Float32Array([
+              origin.x, origin.y, origin.z,
+              endPoint.x, endPoint.y, endPoint.z
+            ])}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color={color} depthTest={false} linewidth={2} />
+      </line>
+
+      {/* Arrow head (cone) */}
+      <mesh position={headPosition} quaternion={headRotation} renderOrder={1000}>
+        <coneGeometry args={[headWidth, headLength, 8]} />
+        <meshBasicMaterial color={color} depthTest={false} />
+      </mesh>
     </group>
   )
 }

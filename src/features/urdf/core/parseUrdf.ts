@@ -45,9 +45,18 @@ function extractJointInfo(object: THREE.Object3D): UrdfJointInfo | null {
   const name = joint.name || 'unnamed_joint'
   const type = normalizeJointType(joint.jointType)
 
-  // Extract axis (default to [0, 1, 0] if not specified)
+  // Extract axis in local coordinates (default to [0, 1, 0] if not specified)
   const axisData = joint.axis || { x: 0, y: 1, z: 0 }
-  const axis = new THREE.Vector3(axisData.x || 0, axisData.y || 1, axisData.z || 0)
+  const localAxis = new THREE.Vector3(axisData.x || 0, axisData.y || 1, axisData.z || 0)
+
+  // Transform axis from local joint coordinates to world coordinates
+  // This is critical for joints with complex parent transformations (e.g., thumb)
+  const worldAxis = new THREE.Vector3()
+  const worldQuaternion = new THREE.Quaternion()
+  object.getWorldQuaternion(worldQuaternion) // Get accumulated rotation from all parents
+  worldAxis.copy(localAxis).applyQuaternion(worldQuaternion).normalize()
+
+  const axis = worldAxis
 
   // Extract limits
   let limits: JointLimit | null = null

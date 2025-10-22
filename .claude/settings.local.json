@@ -3,7 +3,24 @@
     "allow": [
       "Bash(npx tsc --noEmit)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Read(//Users/lingyizhou/Documents/**)",
+      "Bash(touch:*)",
+      "Bash(src/features/tracking/types.ts )",
+      "Bash(src/features/urdf/types.ts )",
+      "Bash(src/features/alignment/types.ts )",
+      "Bash(src/features/fingertips/types.ts )",
+      "Bash(src/features/ik/types.ts )",
+      "Bash(src/features/debug/types.ts )",
+      "Bash(src/features/camera/types.ts )",
+      "Bash(src/features/assets/types.ts )",
+      "Bash(src/features/inspector/styles.css )",
+      "Bash(src/store/.gitkeep )",
+      "Bash(src/shared/hooks/.gitkeep )",
+      "Bash(src/shared/utils/.gitkeep )",
+      "Bash(src/shared/types/.gitkeep )",
+      "Bash(src/config/.gitkeep )",
+      "Bash(public/assets/manifests/.gitkeep)"
     ],
     "deny": [],
     "ask": []

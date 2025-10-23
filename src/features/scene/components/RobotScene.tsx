@@ -1,6 +1,6 @@
 'use client'
 
-import { OrbitControls, Grid } from '@react-three/drei'
+import { OrbitControls, Grid, Text } from '@react-three/drei'
 import { RobotHandInterface } from '@/features/urdf/components/RobotHandInterface'
 
 export function RobotScene() {
@@ -26,6 +26,48 @@ export function RobotScene() {
         followCamera={false}
         infiniteGrid={false}
       />
+
+      {/* Directional labels for scene orientation */}
+      <Text
+        position={[0, 0.1, -10]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={0.5}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+      >
+        FRONT
+      </Text>
+      <Text
+        position={[0, 0.1, 10]}
+        rotation={[-Math.PI / 2, 0, Math.PI]}
+        fontSize={0.5}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+      >
+        BACK
+      </Text>
+      <Text
+        position={[-10, 0.1, 0]}
+        rotation={[-Math.PI / 2, 0, Math.PI / 2]}
+        fontSize={0.5}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+      >
+        LEFT
+      </Text>
+      <Text
+        position={[10, 0.1, 0]}
+        rotation={[-Math.PI / 2, 0, -Math.PI / 2]}
+        fontSize={0.5}
+        color="#9ca3af"
+        anchorX="center"
+        anchorY="middle"
+      >
+        RIGHT
+      </Text>
 
       {/* Robot Hand Interface - Linker L10 Right with Skeleton Overlay */}
       <RobotHandInterface

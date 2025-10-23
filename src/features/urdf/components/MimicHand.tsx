@@ -157,6 +157,7 @@ export function MimicHand({
   // Landmark indices for finger roots
   const INDEX_ROOT = 5
   const MIDDLE_ROOT = 9
+  const RING_ROOT = 13
   const PINKY_ROOT = 17
 
   // Landmark indices for fingertips
@@ -209,6 +210,67 @@ export function MimicHand({
 
     return scaleFactor
   }, [handData, handMetadata, scale])
+
+  // Compute rotation to align palm planes (robot -> tracked)
+  const palmAlignmentRotation = useMemo(() => {
+    // Default to identity rotation
+    const identityQuat = new THREE.Quaternion()
+
+    if (
+      !handData ||
+      !handData.landmarks ||
+      !handMetadata ||
+      !handMetadata.fingers.index ||
+      !handMetadata.fingers.pinky
+    ) {
+      return identityQuat
+    }
+
+    try {
+      // 1. Get tracked hand landmarks
+      const trackedWrist = handData.landmarks[0]
+      const trackedIndexRoot = handData.landmarks[INDEX_ROOT]
+      const trackedPinkyRoot = handData.landmarks[PINKY_ROOT]
+
+      if (!trackedWrist || !trackedIndexRoot || !trackedPinkyRoot) {
+        return identityQuat
+      }
+
+      // 2. Compute tracked palm plane normal
+      const trackedV1 = new THREE.Vector3(
+        trackedIndexRoot.x - trackedWrist.x,
+        trackedIndexRoot.y - trackedWrist.y,
+        trackedIndexRoot.z - trackedWrist.z
+      )
+      const trackedV2 = new THREE.Vector3(
+        trackedPinkyRoot.x - trackedWrist.x,
+        trackedPinkyRoot.y - trackedWrist.y,
+        trackedPinkyRoot.z - trackedWrist.z
+      )
+      const trackedNormal = new THREE.Vector3().crossVectors(trackedV1, trackedV2).normalize()
+
+      // 3. Get robot hand joint positions
+      const jointLookup = buildJointLookup(handMetadata)
+      const robotIndexRootJoint = handMetadata.fingers.index.joints[0]
+      const robotPinkyRootJoint = handMetadata.fingers.pinky.joints[0]
+
+      const robotIndexRootPos = computeWorldPosition(robotIndexRootJoint, handMetadata, jointLookup)
+      const robotPinkyRootPos = computeWorldPosition(robotPinkyRootJoint, handMetadata, jointLookup)
+
+      // 4. Compute robot palm plane normal (wrist is at [0,0,0])
+      const robotV1 = new THREE.Vector3(...robotIndexRootPos)
+      const robotV2 = new THREE.Vector3(...robotPinkyRootPos)
+      const robotNormal = new THREE.Vector3().crossVectors(robotV1, robotV2).normalize()
+
+      // 5. Calculate rotation quaternion to align robot normal with tracked normal
+      const alignmentQuat = new THREE.Quaternion().setFromUnitVectors(robotNormal, trackedNormal)
+
+      return alignmentQuat
+    } catch (error) {
+      console.warn('Failed to compute palm alignment rotation:', error)
+      return identityQuat
+    }
+  }, [handData, handMetadata])
 
   // If mimic hand is hidden, return null
   if (!isMimicHandVisible) {
@@ -270,6 +332,14 @@ export function MimicHand({
               </mesh>
             )}
 
+            {/* Ring finger root - Yellow sphere */}
+            {handData.landmarks[RING_ROOT] && (
+              <mesh position={getRelativePosition(handData.landmarks[RING_ROOT])}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="yellow" />
+              </mesh>
+            )}
+
             {/* Pinky finger root - Blue sphere */}
             {handData.landmarks[PINKY_ROOT] && (
               <mesh position={getRelativePosition(handData.landmarks[PINKY_ROOT])}>
@@ -321,56 +391,80 @@ export function MimicHand({
         </group>
       )}
 
-      {/* Thumb joint rotation axes from hand metadata - colored lines */}
-      {handMetadata && handMetadata.fingers.thumb && (() => {
+      {/* All finger joint rotation axes from hand metadata - colored lines */}
+      {handMetadata && (() => {
         const jointLookup = buildJointLookup(handMetadata)
 
+        // Color schemes for each finger
+        const fingerColors: Record<string, number[]> = {
+          thumb: [
+            0xff0000, // cmc_roll - bright red
+            0xff4500, // cmc_yaw - orange red
+            0xff8c00, // cmc_pitch - dark orange
+            0xffa500, // mcp - orange
+            0xffd700, // ip - gold
+          ],
+          index: [
+            0xffff00, // mcp - yellow
+            0xffcc00, // pip - gold yellow
+            0xff9900, // dip - orange yellow
+          ],
+          middle: [
+            0x00ff00, // mcp - green
+            0x00cc00, // pip - darker green
+            0x009900, // dip - even darker green
+          ],
+          ring: [
+            0x00ffff, // mcp - cyan
+            0x00ccff, // pip - light blue
+            0x0099ff, // dip - blue
+          ],
+          pinky: [
+            0xff00ff, // mcp - magenta
+            0xcc00ff, // pip - purple
+            0x9900ff, // dip - violet
+          ],
+        }
+
         return (
-          <group position={[0, 0, 0]}>
-            {handMetadata.fingers.thumb.joints.map((joint, index) => {
-              // Compute world position and axis direction
-              const worldPos = computeWorldPosition(joint, handMetadata, jointLookup)
-              const worldAxis = computeWorldAxisDirection(joint, handMetadata, jointLookup)
+          <group position={[0, 0, 0]} quaternion={palmAlignmentRotation}>
+            {/* Iterate through all fingers */}
+            {Object.entries(handMetadata.fingers).map(([fingerName, fingerMetadata]) => {
+              if (!fingerMetadata) return null
 
-              // Line length for visualization
-              const lineLength = 0.03
+              const colors = fingerColors[fingerName] || [0xffffff]
 
-              // Create arrow helper to visualize rotation axis
-              const arrowHelper = new THREE.ArrowHelper(
-                worldAxis.normalize(),
-                new THREE.Vector3(...worldPos),
-                lineLength,
-                [
-                  0xff0000, // cmc_roll - bright red
-                  0xff4500, // cmc_yaw - orange red
-                  0xff8c00, // cmc_pitch - dark orange
-                  0xffa500, // mcp - orange
-                  0xffd700, // ip - gold
-                ][index] || 0xffffff,
-                lineLength * 0.25, // Head length
-                lineLength * 0.2   // Head width
-              )
+              return fingerMetadata.joints.map((joint, index) => {
+                // Compute world position and axis direction
+                const worldPos = computeWorldPosition(joint, handMetadata, jointLookup)
+                const worldAxis = computeWorldAxisDirection(joint, handMetadata, jointLookup)
 
-              return (
-                <group key={joint.name}>
-                  <primitive object={arrowHelper} />
-                  {/* Small sphere at joint position */}
-                  <mesh position={worldPos}>
-                    <sphereGeometry args={[0.005, 8, 8]} />
-                    <meshBasicMaterial
-                      color={
-                        [
-                          '#ff0000', // cmc_roll - bright red
-                          '#ff4500', // cmc_yaw - orange red
-                          '#ff8c00', // cmc_pitch - dark orange
-                          '#ffa500', // mcp - orange
-                          '#ffd700', // ip - gold
-                        ][index] || '#ffffff'
-                      }
-                    />
-                  </mesh>
-                </group>
-              )
+                // Line length for visualization
+                const lineLength = 0.03
+
+                // Create arrow helper to visualize rotation axis
+                const arrowHelper = new THREE.ArrowHelper(
+                  worldAxis.normalize(),
+                  new THREE.Vector3(...worldPos),
+                  lineLength,
+                  colors[index] || 0xffffff,
+                  lineLength * 0.25, // Head length
+                  lineLength * 0.2   // Head width
+                )
+
+                return (
+                  <group key={joint.name}>
+                    <primitive object={arrowHelper} />
+                    {/* Small sphere at joint position */}
+                    <mesh position={worldPos}>
+                      <sphereGeometry args={[0.005, 8, 8]} />
+                      <meshBasicMaterial
+                        color={colors[index] || 0xffffff}
+                      />
+                    </mesh>
+                  </group>
+                )
+              })
             })}
           </group>
         )

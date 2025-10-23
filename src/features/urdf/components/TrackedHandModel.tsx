@@ -48,6 +48,9 @@ export function TrackedHandModel({
   // Subscribe to hand tracking data from global store
   const trackingResults = useStore((state) => state.tracking.results)
 
+  // Subscribe to hand metadata to get joint positions
+  const handMetadata = useStore((state) => state.urdf.handMetadata)
+
   // Apply hand tracking rotation in real-time
   useFrame(() => {
     if (!enabled || !groupRef.current || trackingResults.length === 0) {
@@ -66,12 +69,23 @@ export function TrackedHandModel({
     targetQuaternion.current.copy(rotationQuat)
 
     // Apply with smoothing
-    applySmoothedRotation(groupRef.current.quaternion, targetQuaternion.current, smoothing)
+    // applySmoothedRotation(groupRef.current.quaternion, targetQuaternion.current, smoothing)
   })
+
+  // Get thumb CMC joint position from metadata
+  const thumbCmcPosition = handMetadata?.fingers.thumb?.joints[0]?.position
 
   return (
     <group ref={groupRef} position={position} scale={scale}>
       <primitive object={model} />
+
+      {/* Sphere marker at thumb CMC location */}
+      {thumbCmcPosition && (
+        <mesh position={thumbCmcPosition}>
+          <sphereGeometry args={[0.01, 16, 16]} />
+          <meshStandardMaterial color="orange" />
+        </mesh>
+      )}
     </group>
   )
 }

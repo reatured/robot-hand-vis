@@ -10,6 +10,7 @@ import { useStore } from '@/store'
 import type { HandTrackingResult } from '@/features/tracking/types'
 import type { JointMetadata, RobotHandMetadata } from '@/features/urdf/types'
 import * as THREE from 'three'
+import { useMemo } from 'react'
 
 /**
  * Build a lookup map for joints by child link name
@@ -150,11 +151,6 @@ export function MimicHand({
   // Subscribe to hand model metadata from Zustand store
   const handMetadata = useStore((state) => state.urdf.handMetadata)
 
-  // If mimic hand is hidden, return null
-  if (!isMimicHandVisible) {
-    return null
-  }
-
   // Get the first detected hand (or filter by handedness if needed)
   const handData: HandTrackingResult | undefined = trackingResults[0]
 
@@ -170,6 +166,55 @@ export function MimicHand({
   const RING_TIP = 16
   const PINKY_TIP = 20
 
+  // Compute calibrated scale based on palm length (wrist to middle finger root)
+  const calibratedScale = useMemo(() => {
+    // Default to user-provided scale if calibration not possible
+    let scaleFactor = scale
+
+    if (handData && handData.landmarks && handMetadata && handMetadata.fingers.middle) {
+      try {
+        // 1. Calculate tracked hand palm length (wrist to middle finger root)
+        const wrist = handData.landmarks[0]
+        const middleRoot = handData.landmarks[MIDDLE_ROOT]
+
+        if (wrist && middleRoot) {
+          const trackedPalmLength = Math.sqrt(
+            Math.pow(middleRoot.x - wrist.x, 2) +
+            Math.pow(middleRoot.y - wrist.y, 2) +
+            Math.pow(middleRoot.z - wrist.z, 2)
+          )
+
+          // 2. Calculate robot hand palm length (base to middle finger root)
+          const jointLookup = buildJointLookup(handMetadata)
+          const middleBaseJoint = handMetadata.fingers.middle.joints[0]
+          const robotMiddleRootPos = computeWorldPosition(middleBaseJoint, handMetadata, jointLookup)
+
+          // Distance from base link [0,0,0] to middle finger base
+          const robotPalmLength = Math.sqrt(
+            Math.pow(robotMiddleRootPos[0], 2) +
+            Math.pow(robotMiddleRootPos[1], 2) +
+            Math.pow(robotMiddleRootPos[2], 2)
+          )
+
+          // 3. Compute scale factor to match robot model size
+          if (trackedPalmLength > 0) {
+            const autoScale = robotPalmLength / trackedPalmLength
+            scaleFactor = autoScale
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to calibrate mimic hand scale:', error)
+      }
+    }
+
+    return scaleFactor
+  }, [handData, handMetadata, scale])
+
+  // If mimic hand is hidden, return null
+  if (!isMimicHandVisible) {
+    return null
+  }
+
   // Convert MediaPipe normalized coordinates to 3D scene coordinates
   const convertToSceneCoords = (landmark: { x: number; y: number; z: number }) => {
     // MediaPipe: x,y are normalized 0-1, z is relative depth
@@ -182,93 +227,97 @@ export function MimicHand({
   }
 
   // Convert landmark to relative position from wrist (landmark 0)
+  // Apply calibrated scale to position distances, not mesh sizes
   const getRelativePosition = (landmark: { x: number; y: number; z: number }) => {
     if (!handData || !handData.landmarks[0]) return [0, 0, 0] as [number, number, number]
 
     const wrist = handData.landmarks[0]
-    const relativeX = (landmark.x - wrist.x) * 2
-    const relativeY = -(landmark.y - wrist.y) * 2 // Invert Y axis
-    const relativeZ = -(landmark.z - wrist.z) * 2
+    const relativeX = (landmark.x - wrist.x) * 2 * calibratedScale
+    const relativeY = -(landmark.y - wrist.y) * 2 * calibratedScale // Invert Y axis
+    const relativeZ = -(landmark.z - wrist.z) * 2 * calibratedScale
 
     return [relativeX, relativeY, relativeZ] as [number, number, number]
   }
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
-      {/* Root cube at wrist position (landmark 0) */}
+
+      {/* Wrist root cube */}
+      <mesh>
+        <boxGeometry args={[0.02, 0.02, 0.05]} />
+        <meshStandardMaterial color="cyan" />
+      </mesh>
+
+      {/* Tracking landmarks - positions scaled, mesh sizes constant */}
       {handData && handData.landmarks && handData.landmarks[0] && (
         <group position={[0, 0, 0]}>
-          {/* Wrist root cube */}
-          <mesh>
-            <boxGeometry args={[0.02, 0.02, 0.05]} />
-            <meshStandardMaterial color="cyan" />
-          </mesh>
 
-          {/* Debug spheres for finger roots - positioned relative to wrist */}
-          {/* Index finger root - Red sphere */}
-          {handData.landmarks[INDEX_ROOT] && (
-            <mesh position={getRelativePosition(handData.landmarks[INDEX_ROOT])}>
-              <sphereGeometry args={[0.05, 16, 16]} />
-              <meshStandardMaterial color="red" />
-            </mesh>
-          )}
 
-          {/* Middle finger root - Green sphere */}
-          {handData.landmarks[MIDDLE_ROOT] && (
-            <mesh position={getRelativePosition(handData.landmarks[MIDDLE_ROOT])}>
-              <sphereGeometry args={[0.05, 16, 16]} />
-              <meshStandardMaterial color="green" />
-            </mesh>
-          )}
+            {/* Debug spheres for finger roots - positioned relative to wrist */}
+            {/* Index finger root - Red sphere */}
+            {handData.landmarks[INDEX_ROOT] && (
+              <mesh position={getRelativePosition(handData.landmarks[INDEX_ROOT])}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="red" />
+              </mesh>
+            )}
 
-          {/* Pinky finger root - Blue sphere */}
-          {handData.landmarks[PINKY_ROOT] && (
-            <mesh position={getRelativePosition(handData.landmarks[PINKY_ROOT])}>
-              <sphereGeometry args={[0.05, 16, 16]} />
-              <meshStandardMaterial color="blue" />
-            </mesh>
-          )}
+            {/* Middle finger root - Green sphere */}
+            {handData.landmarks[MIDDLE_ROOT] && (
+              <mesh position={getRelativePosition(handData.landmarks[MIDDLE_ROOT])}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="green" />
+              </mesh>
+            )}
 
-          {/* Fingertip spheres - smaller size for distinction */}
-          {/* Thumb tip - Orange sphere */}
-          {handData.landmarks[THUMB_TIP] && (
-            <mesh position={getRelativePosition(handData.landmarks[THUMB_TIP])}>
-              <sphereGeometry args={[0.03, 16, 16]} />
-              <meshStandardMaterial color="orange" />
-            </mesh>
-          )}
+            {/* Pinky finger root - Blue sphere */}
+            {handData.landmarks[PINKY_ROOT] && (
+              <mesh position={getRelativePosition(handData.landmarks[PINKY_ROOT])}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="blue" />
+              </mesh>
+            )}
 
-          {/* Index tip - Yellow sphere */}
-          {handData.landmarks[INDEX_TIP] && (
-            <mesh position={getRelativePosition(handData.landmarks[INDEX_TIP])}>
-              <sphereGeometry args={[0.03, 16, 16]} />
-              <meshStandardMaterial color="yellow" />
-            </mesh>
-          )}
+            {/* Fingertip spheres - smaller size for distinction */}
+            {/* Thumb tip - Orange sphere */}
+            {handData.landmarks[THUMB_TIP] && (
+              <mesh position={getRelativePosition(handData.landmarks[THUMB_TIP])}>
+                <sphereGeometry args={[0.03, 16, 16]} />
+                <meshStandardMaterial color="orange" />
+              </mesh>
+            )}
 
-          {/* Middle tip - Magenta sphere */}
-          {handData.landmarks[MIDDLE_TIP] && (
-            <mesh position={getRelativePosition(handData.landmarks[MIDDLE_TIP])}>
-              <sphereGeometry args={[0.03, 16, 16]} />
-              <meshStandardMaterial color="magenta" />
-            </mesh>
-          )}
+            {/* Index tip - Yellow sphere */}
+            {handData.landmarks[INDEX_TIP] && (
+              <mesh position={getRelativePosition(handData.landmarks[INDEX_TIP])}>
+                <sphereGeometry args={[0.03, 16, 16]} />
+                <meshStandardMaterial color="yellow" />
+              </mesh>
+            )}
 
-          {/* Ring tip - Purple sphere */}
-          {handData.landmarks[RING_TIP] && (
-            <mesh position={getRelativePosition(handData.landmarks[RING_TIP])}>
-              <sphereGeometry args={[0.03, 16, 16]} />
-              <meshStandardMaterial color="purple" />
-            </mesh>
-          )}
+            {/* Middle tip - Magenta sphere */}
+            {handData.landmarks[MIDDLE_TIP] && (
+              <mesh position={getRelativePosition(handData.landmarks[MIDDLE_TIP])}>
+                <sphereGeometry args={[0.03, 16, 16]} />
+                <meshStandardMaterial color="magenta" />
+              </mesh>
+            )}
 
-          {/* Pinky tip - Pink sphere */}
-          {handData.landmarks[PINKY_TIP] && (
-            <mesh position={getRelativePosition(handData.landmarks[PINKY_TIP])}>
-              <sphereGeometry args={[0.03, 16, 16]} />
-              <meshStandardMaterial color="pink" />
-            </mesh>
-          )}
+            {/* Ring tip - Purple sphere */}
+            {handData.landmarks[RING_TIP] && (
+              <mesh position={getRelativePosition(handData.landmarks[RING_TIP])}>
+                <sphereGeometry args={[0.03, 16, 16]} />
+                <meshStandardMaterial color="purple" />
+              </mesh>
+            )}
+
+            {/* Pinky tip - Pink sphere */}
+            {handData.landmarks[PINKY_TIP] && (
+              <mesh position={getRelativePosition(handData.landmarks[PINKY_TIP])}>
+                <sphereGeometry args={[0.03, 16, 16]} />
+                <meshStandardMaterial color="pink" />
+              </mesh>
+            )}
         </group>
       )}
 
@@ -326,16 +375,6 @@ export function MimicHand({
           </group>
         )
       })()
-      }
-
-      {/* Fallback placeholder when no hand detected */}
-      {
-        (!handData || !handData.landmarks) && (
-          <mesh>
-            <boxGeometry args={[0.02, 0.02, 0.05]} />
-            <meshStandardMaterial color="cyan" />
-          </mesh>
-        )
       }
     </group >
   )

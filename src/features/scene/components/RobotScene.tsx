@@ -10,7 +10,6 @@ export interface HandModel {
   scale: number
   position: [number, number, number]
   rotation: [number, number, number]
-  // handState: RobotHandState
 }
 
 export function RobotScene() {

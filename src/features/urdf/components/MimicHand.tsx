@@ -8,6 +8,114 @@
 import { HandModel } from '@/features/scene/components/RobotScene'
 import { useStore } from '@/store'
 import type { HandTrackingResult } from '@/features/tracking/types'
+import type { JointMetadata, RobotHandMetadata } from '@/features/urdf/types'
+import * as THREE from 'three'
+
+/**
+ * Build a lookup map for joints by child link name
+ */
+function buildJointLookup(metadata: RobotHandMetadata): Map<string, JointMetadata> {
+  const jointByChildLink = new Map<string, JointMetadata>()
+
+  Object.values(metadata.fingers).forEach((finger) => {
+    if (finger) {
+      finger.joints.forEach((j) => {
+        jointByChildLink.set(j.childLink, j)
+      })
+    }
+  })
+
+  return jointByChildLink
+}
+
+/**
+ * Get parent chain from joint to base link
+ */
+function getParentChain(
+  joint: JointMetadata,
+  metadata: RobotHandMetadata,
+  jointLookup: Map<string, JointMetadata>
+): JointMetadata[] {
+  const chain: JointMetadata[] = []
+  let currentJoint: JointMetadata | undefined = joint
+
+  while (currentJoint) {
+    chain.push(currentJoint)
+
+    if (currentJoint.parentLink === metadata.baseLink) {
+      break
+    }
+
+    currentJoint = jointLookup.get(currentJoint.parentLink)
+  }
+
+  return chain.reverse() // Base to target order
+}
+
+/**
+ * Compute world position of a joint by traversing parent chain
+ * Accumulates positions from the joint up to the base link
+ */
+function computeWorldPosition(
+  joint: JointMetadata,
+  metadata: RobotHandMetadata,
+  jointLookup: Map<string, JointMetadata>
+): [number, number, number] {
+  const chain = getParentChain(joint, metadata, jointLookup)
+
+  let worldX = 0
+  let worldY = 0
+  let worldZ = 0
+
+  for (const j of chain) {
+    worldX += j.position[0]
+    worldY += j.position[1]
+    worldZ += j.position[2]
+  }
+
+  return [worldX, worldY, worldZ]
+}
+
+/**
+ * Compute world rotation (quaternion) by accumulating parent rotations
+ * Returns the accumulated rotation from base to this joint
+ */
+function computeWorldRotation(
+  joint: JointMetadata,
+  metadata: RobotHandMetadata,
+  jointLookup: Map<string, JointMetadata>
+): THREE.Quaternion {
+  const chain = getParentChain(joint, metadata, jointLookup)
+
+  // Start with identity rotation
+  const worldQuat = new THREE.Quaternion()
+
+  // For each joint in chain, we would need to apply its rotation
+  // However, URDF joint positions are defined in the parent frame
+  // The axis directions are also in the parent frame
+  // For now, we'll just return identity since we need the actual joint angles
+  // to compute the full rotation (which we don't have in metadata)
+
+  return worldQuat
+}
+
+/**
+ * Transform axis direction by accumulated parent rotations
+ */
+function computeWorldAxisDirection(
+  joint: JointMetadata,
+  metadata: RobotHandMetadata,
+  jointLookup: Map<string, JointMetadata>
+): THREE.Vector3 {
+  // Get local axis direction
+  const localAxis = new THREE.Vector3(...joint.axis)
+
+  // Get accumulated rotation
+  const worldRot = computeWorldRotation(joint, metadata, jointLookup)
+
+  // Transform axis by world rotation
+  return localAxis.applyQuaternion(worldRot)
+}
 
 interface MimicHandProps {
   /** Hand model configuration object */
@@ -37,6 +145,15 @@ export function MimicHand({
 
   // Subscribe to tracking data from Zustand store
   const trackingResults = useStore((state) => state.tracking.results)
+  const isMimicHandVisible = useStore((state) => state.urdf.isMimicHandVisible)
+
+  // Subscribe to hand model metadata from Zustand store
+  const handMetadata = useStore((state) => state.urdf.handMetadata)
+
+  // If mimic hand is hidden, return null
+  if (!isMimicHandVisible) {
+    return null
+  }
 
   // Get the first detected hand (or filter by handedness if needed)
   const handData: HandTrackingResult | undefined = trackingResults[0]
@@ -83,7 +200,7 @@ export function MimicHand({
         <group position={[0, 0, 0]}>
           {/* Wrist root cube */}
           <mesh>
-            <boxGeometry args={[0.05, 0.05, 0.05]} />
+            <boxGeometry args={[0.02, 0.02, 0.05]} />
             <meshStandardMaterial color="cyan" />
           </mesh>
 
@@ -153,14 +270,69 @@ export function MimicHand({
             </mesh>
           )}
         </group>
-      )
+      )}
+
+      {/* Thumb joint rotation axes from hand metadata - colored lines */}
+      {handMetadata && handMetadata.fingers.thumb && (() => {
+        const jointLookup = buildJointLookup(handMetadata)
+
+        return (
+          <group position={[0, 0, 0]}>
+            {handMetadata.fingers.thumb.joints.map((joint, index) => {
+              // Compute world position and axis direction
+              const worldPos = computeWorldPosition(joint, handMetadata, jointLookup)
+              const worldAxis = computeWorldAxisDirection(joint, handMetadata, jointLookup)
+
+              // Line length for visualization
+              const lineLength = 0.03
+
+              // Create arrow helper to visualize rotation axis
+              const arrowHelper = new THREE.ArrowHelper(
+                worldAxis.normalize(),
+                new THREE.Vector3(...worldPos),
+                lineLength,
+                [
+                  0xff0000, // cmc_roll - bright red
+                  0xff4500, // cmc_yaw - orange red
+                  0xff8c00, // cmc_pitch - dark orange
+                  0xffa500, // mcp - orange
+                  0xffd700, // ip - gold
+                ][index] || 0xffffff,
+                lineLength * 0.25, // Head length
+                lineLength * 0.2   // Head width
+              )
+
+              return (
+                <group key={joint.name}>
+                  <primitive object={arrowHelper} />
+                  {/* Small sphere at joint position */}
+                  <mesh position={worldPos}>
+                    <sphereGeometry args={[0.005, 8, 8]} />
+                    <meshBasicMaterial
+                      color={
+                        [
+                          '#ff0000', // cmc_roll - bright red
+                          '#ff4500', // cmc_yaw - orange red
+                          '#ff8c00', // cmc_pitch - dark orange
+                          '#ffa500', // mcp - orange
+                          '#ffd700', // ip - gold
+                        ][index] || '#ffffff'
+                      }
+                    />
+                  </mesh>
+                </group>
+              )
+            })}
+          </group>
+        )
+      })()
       }
 
       {/* Fallback placeholder when no hand detected */}
       {
         (!handData || !handData.landmarks) && (
           <mesh>
-            <boxGeometry args={[0.05, 0.05, 0.05]} />
+            <boxGeometry args={[0.02, 0.02, 0.05]} />
             <meshStandardMaterial color="cyan" />
           </mesh>
         )

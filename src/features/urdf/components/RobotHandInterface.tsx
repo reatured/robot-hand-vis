@@ -10,6 +10,9 @@ import * as THREE from 'three'
 import { loadURDF } from '../core/loader'
 import { TrackedHandModel } from './TrackedHandModel'
 import { HandModel } from '@/features/scene/components/RobotScene'
+import { useStore } from '@/store'
+import { LINKER_L10_RIGHT } from '../data/linker-l10-right'
+import { createHandState } from '../core/handState'
 
 interface RobotHandInterfaceProps {
   /** Hand model configuration object */
@@ -49,6 +52,10 @@ export function RobotHandInterface({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Get store action to set hand model and visibility state
+  const setHandModel = useStore((state) => state.setHandModel)
+  const isModelVisible = useStore((state) => state.urdf.isModelVisible)
+
   useEffect(() => {
     let mounted = true
 
@@ -72,6 +79,14 @@ export function RobotHandInterface({
         if (!mounted) return
 
         console.log('URDF model loaded successfully', loadedRobot)
+
+        // Load hand metadata and create runtime state
+        const metadata = getHandMetadata(modelId)
+        if (metadata) {
+          const handState = createHandState(metadata)
+          setHandModel(metadata, handState)
+          console.log('Hand metadata stored in Zustand:', metadata.id)
+        }
 
         setRobot(loadedRobot)
         setLoading(false)
@@ -119,6 +134,11 @@ export function RobotHandInterface({
 
   console.log('[RobotHandInterface] Rendered successfully, robot loaded:', robot !== null)
 
+  // If model is hidden, return null
+  if (!isModelVisible) {
+    return null
+  }
+
   // If tracking is enabled, use TrackedHandModel
   if (useTracking) {
     return (
@@ -155,4 +175,17 @@ function getUrdfPath(modelId: string): string {
   }
 
   return models[modelId] || models['linker-l10-right']
+}
+
+/**
+ * Get hand metadata by model ID
+ */
+function getHandMetadata(modelId: string) {
+  // Map model IDs to their metadata
+  const metadataMap: Record<string, typeof LINKER_L10_RIGHT> = {
+    'linker-l10-right': LINKER_L10_RIGHT,
+    // Add more models as they become available
+  }
+
+  return metadataMap[modelId] || LINKER_L10_RIGHT
 }

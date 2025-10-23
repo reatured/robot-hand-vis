@@ -38,7 +38,7 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^14.0.4",
     "@types/node": "^24.9.1",
-    "@types/react": "^19.2.2",
+    "@types/react": "^18.3.26",
     "@types/three": "^0.180.0",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",

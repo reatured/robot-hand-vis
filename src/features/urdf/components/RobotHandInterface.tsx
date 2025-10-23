@@ -2,17 +2,12 @@
 
 /**
  * Robot Hand Interface Component
- * Main wrapper that loads URDF, extracts skeleton data, and renders both model and overlay
+ * Simple wrapper that loads and displays a URDF model
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import * as THREE from 'three'
 import { loadURDF } from '../core/loader'
-import { parseUrdfJoints } from '../core/parseUrdf'
-import { extractSkeletonData } from '../core/skeletonExtractor'
-import { useStore } from '@/store'
-import { RobotModelSynced } from './RobotModelSynced'
-import { SkeletonOverlay } from './SkeletonOverlay'
 
 interface RobotHandInterfaceProps {
   /** Model ID to load (defaults to linker-l10-right) */
@@ -34,10 +29,7 @@ export function RobotHandInterface({
   const [robot, setRobot] = useState<THREE.Group | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Get store actions
-  const setJoints = useStore((state) => (state as any).setJoints)
-  const setSkeletonData = useStore((state) => (state as any).setSkeletonData)
+  const groupRef = useRef<THREE.Group>(null)
 
   useEffect(() => {
     let mounted = true
@@ -54,32 +46,15 @@ export function RobotHandInterface({
 
         // Load the URDF model
         const loadedRobot = await loadURDF(urdfPath, {
-          scale,
-          position,
-          rotation,
+          // Don't apply transforms here - we'll apply them to the wrapper group
+          scale: 1,
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
         })
 
         if (!mounted) return
 
         console.log('URDF model loaded successfully', loadedRobot)
-
-        // Parse joint information from the loaded robot
-        const parsedData = parseUrdfJoints(loadedRobot, modelId)
-        console.log(`Parsed ${parsedData.joints.length} joints from URDF`)
-
-        // Store joints in Zustand for inspector (legacy)
-        setJoints(parsedData.joints)
-
-        // Extract skeleton data
-        const rootPos = new THREE.Vector3(...position)
-        const rootRot = new THREE.Euler(...rotation)
-        const skeletonData = extractSkeletonData(loadedRobot, parsedData.joints, rootPos, rootRot)
-
-        console.log('Skeleton data extracted:', skeletonData)
-        console.log('Palm dimensions:', skeletonData.palmDimensions)
-
-        // Store skeleton data in Zustand (SINGLE SOURCE OF TRUTH)
-        setSkeletonData(skeletonData)
 
         setRobot(loadedRobot)
         setLoading(false)
@@ -97,7 +72,19 @@ export function RobotHandInterface({
     return () => {
       mounted = false
     }
-  }, [modelId, scale, position, rotation, setJoints, setSkeletonData])
+  }, [modelId]) // Only reload when modelId changes
+
+  // Add robot to the group when loaded
+  useEffect(() => {
+    if (groupRef.current && robot) {
+      // Clear previous children
+      while (groupRef.current.children.length > 0) {
+        groupRef.current.remove(groupRef.current.children[0])
+      }
+      // Add loaded robot
+      groupRef.current.add(robot)
+    }
+  }, [robot])
 
   if (error) {
     console.error('[RobotHandInterface] Error state:', error)
@@ -128,13 +115,12 @@ export function RobotHandInterface({
   console.log('[RobotHandInterface] Rendered successfully, robot loaded:', robot !== null)
 
   return (
-    <group>
-      {/* Robot model synced with skeleton data */}
-      <RobotModelSynced robot={robot} />
-
-      {/* Skeleton overlay visualization (always on top) */}
-      <SkeletonOverlay />
-    </group>
+    <group
+      ref={groupRef}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    />
   )
 }
 

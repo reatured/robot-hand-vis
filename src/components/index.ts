@@ -24,7 +24,7 @@ export { RobotScene } from '@/features/scene/components/RobotScene'
 // ============================================================================
 // URDF Feature (M2)
 // ============================================================================
-export { RobotHand } from '@/features/urdf/components/RobotHand'
+export { RobotHandInterface as RobotHand } from '@/features/urdf/components/RobotHandInterface'
 
 // ============================================================================
 // Tracking Feature (M1)
@@ -47,8 +47,8 @@ export { LandmarkOverlay } from '@/features/tracking/components/LandmarkOverlay'
 // ============================================================================
 // Debug Feature (M6)
 // ============================================================================
-export { DebugAxes } from '@/features/debug/components/DebugAxes'
 // Will be available when implemented:
+// export { DebugAxes } from '@/features/debug/components/DebugAxes'
 // export { JointInfo } from '@/features/debug/components/JointInfo'
 // export { HumanHandOverlay } from '@/features/debug/components/HumanHandOverlay'
 
@@ -56,8 +56,8 @@ export { DebugAxes } from '@/features/debug/components/DebugAxes'
 // Inspector Feature (M6)
 // ============================================================================
 export { Inspector } from '@/features/inspector/components/Inspector'
-export { JointsTab } from '@/features/inspector/components/JointsTab'
 // Will be available when implemented:
+// export { JointsTab } from '@/features/inspector/components/JointsTab'
 // export { ModelTab } from '@/features/inspector/components/ModelTab'
 // export { TrackingTab } from '@/features/inspector/components/TrackingTab'
 // export { AlignmentTab } from '@/features/inspector/components/AlignmentTab'

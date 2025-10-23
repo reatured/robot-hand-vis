@@ -15,3 +15,6 @@ export { TrackingInfoOverlay } from './components/TrackingInfoOverlay'
 
 // Hooks
 export { useHandTracking } from './hooks/useHandTracking'
+
+// Store
+export { createTrackingSlice, type TrackingSlice } from './store/trackingSlice'

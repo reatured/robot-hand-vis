@@ -7,11 +7,10 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { createDebugSlice } from '@/features/debug/store/debugSlice'
 import { DebugState } from '@/features/debug/types'
-import { createJointAnimDemoSlice, JointAnimDemoState } from '@/features/urdf/store/jointAnimDemoSlice'
-import { createSkeletonSlice, SkeletonState } from '@/features/urdf/store/skeletonSlice'
+import { createTrackingSlice, TrackingSlice } from '@/features/tracking/store/trackingSlice'
 
 // Combined store type
-type StoreState = DebugState & JointAnimDemoState & SkeletonState // Add more slices as needed
+type StoreState = DebugState & TrackingSlice // Add more slices as needed
 
 /**
  * Main application store
@@ -20,10 +19,7 @@ export const useStore = create<StoreState>()(
   devtools(
     (...a) => ({
       ...createDebugSlice(...a),
-      ...createJointAnimDemoSlice(...a),
-      ...createSkeletonSlice(...a),
-      // Add more slices here as you implement them:
-      // ...createTrackingSlice(...a),
+      ...createTrackingSlice(...a),
     }),
     {
       name: 'robot-hand-vis-store',

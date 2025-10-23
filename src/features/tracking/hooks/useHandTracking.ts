@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { HandTracker } from '../core/handTracker'
 import type { HandTrackingResult } from '../types'
+import { useStore } from '@/store'
 
 interface UseHandTrackingOptions {
   enabled?: boolean
@@ -44,9 +45,14 @@ export function useHandTracking(
   const animationFrameRef = useRef<number | null>(null)
   const fpsCounterRef = useRef({ frames: 0, lastTime: performance.now() })
 
+  // Get store actions
+  const setTrackingResults = useStore((state) => state.setTrackingResults)
+  const setTrackingFPS = useStore((state) => state.setTrackingFPS)
+
   // Handle results from tracker
   const handleResults = useCallback((trackingResults: HandTrackingResult[]) => {
     setResults(trackingResults)
+    setTrackingResults(trackingResults) // Update global store
 
     // Update FPS counter
     const counter = fpsCounterRef.current
@@ -56,11 +62,13 @@ export function useHandTracking(
 
     if (elapsed >= 1000) {
       // Update FPS every second
-      setFps(counter.frames / (elapsed / 1000))
+      const calculatedFps = counter.frames / (elapsed / 1000)
+      setFps(calculatedFps)
+      setTrackingFPS(calculatedFps) // Update global store
       counter.frames = 0
       counter.lastTime = now
     }
-  }, [])
+  }, [setTrackingResults, setTrackingFPS])
 
   // Initialize tracker
   useEffect(() => {

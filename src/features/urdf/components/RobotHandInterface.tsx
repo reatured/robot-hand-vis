@@ -2,12 +2,13 @@
 
 /**
  * Robot Hand Interface Component
- * Simple wrapper that loads and displays a URDF model
+ * Loads a URDF robot hand model and optionally applies hand tracking
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { loadURDF } from '../core/loader'
+import { TrackedHandModel } from './TrackedHandModel'
 
 interface RobotHandInterfaceProps {
   /** Model ID to load (defaults to linker-l10-right) */
@@ -18,6 +19,12 @@ interface RobotHandInterfaceProps {
   position?: [number, number, number]
   /** Rotation [x, y, z] in radians */
   rotation?: [number, number, number]
+  /** Enable hand tracking rotation */
+  useTracking?: boolean
+  /** Which hand to track */
+  trackingHand?: 'Left' | 'Right' | 'auto'
+  /** Rotation smoothing factor (0 = no smoothing, 1 = max smoothing) */
+  smoothing?: number
 }
 
 export function RobotHandInterface({
@@ -25,11 +32,13 @@ export function RobotHandInterface({
   scale = 5,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
+  useTracking = true,
+  trackingHand = 'Right',
+  smoothing = 0.3,
 }: RobotHandInterfaceProps) {
   const [robot, setRobot] = useState<THREE.Group | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const groupRef = useRef<THREE.Group>(null)
 
   useEffect(() => {
     let mounted = true
@@ -46,7 +55,6 @@ export function RobotHandInterface({
 
         // Load the URDF model
         const loadedRobot = await loadURDF(urdfPath, {
-          // Don't apply transforms here - we'll apply them to the wrapper group
           scale: 1,
           position: [0, 0, 0],
           rotation: [0, 0, 0],
@@ -72,19 +80,7 @@ export function RobotHandInterface({
     return () => {
       mounted = false
     }
-  }, [modelId]) // Only reload when modelId changes
-
-  // Add robot to the group when loaded
-  useEffect(() => {
-    if (groupRef.current && robot) {
-      // Clear previous children
-      while (groupRef.current.children.length > 0) {
-        groupRef.current.remove(groupRef.current.children[0])
-      }
-      // Add loaded robot
-      groupRef.current.add(robot)
-    }
-  }, [robot])
+  }, [modelId])
 
   if (error) {
     console.error('[RobotHandInterface] Error state:', error)
@@ -114,13 +110,25 @@ export function RobotHandInterface({
 
   console.log('[RobotHandInterface] Rendered successfully, robot loaded:', robot !== null)
 
+  // If tracking is enabled, use TrackedHandModel
+  if (useTracking) {
+    return (
+      <TrackedHandModel
+        model={robot}
+        trackingHand={trackingHand}
+        smoothing={smoothing}
+        baseRotation={new THREE.Euler(...rotation)}
+        position={position}
+        scale={scale}
+      />
+    )
+  }
+
+  // Otherwise, just render the model without tracking
   return (
-    <group
-      ref={groupRef}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-    />
+    <group position={position} rotation={rotation} scale={scale}>
+      <primitive object={robot} />
+    </group>
   )
 }
 

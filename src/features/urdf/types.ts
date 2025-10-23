@@ -10,6 +10,16 @@ import * as THREE from 'three'
 export type JointType = 'revolute' | 'continuous' | 'prismatic' | 'fixed' | 'floating' | 'planar'
 
 /**
+ * Handedness of the robot hand
+ */
+export type Handedness = 'left' | 'right'
+
+/**
+ * Finger names in a robot hand
+ */
+export type FingerName = 'thumb' | 'index' | 'middle' | 'ring' | 'pinky'
+
+/**
  * Joint limit information from URDF
  */
 export interface JointLimit {
@@ -133,4 +143,113 @@ export interface RobotSkeletonData {
 
   /** Root rotation */
   rootRotation: THREE.Euler
+}
+
+// ============================================================================
+// ROBOT HAND METADATA - Pre-processed from URDF
+// ============================================================================
+
+/**
+ * Joint metadata extracted from URDF
+ * Immutable reference data - does not include runtime state
+ */
+export interface JointMetadata {
+  /** Joint name from URDF (e.g., "thumb_cmc_roll") */
+  name: string
+
+  /** Joint type (revolute, continuous, prismatic, etc.) */
+  type: JointType
+
+  /** Local position [x, y, z] relative to parent link */
+  position: [number, number, number]
+
+  /** Rotation/translation axis direction [x, y, z] */
+  axis: [number, number, number]
+
+  /** Joint limits (null for continuous/fixed joints) */
+  limits: {
+    lower: number
+    upper: number
+    effort: number
+    velocity: number
+  } | null
+
+  /** Parent link name */
+  parentLink: string
+
+  /** Child link name */
+  childLink: string
+}
+
+/**
+ * Finger metadata - contains array of joints for one finger
+ * Different fingers may have different numbers of joints
+ */
+export interface FingerMetadata {
+  /** Finger name (thumb, index, middle, ring, pinky) */
+  name: FingerName
+
+  /** Ordered array of joints from base to tip */
+  joints: JointMetadata[]
+}
+
+/**
+ * Complete robot hand metadata parsed from URDF
+ * This is immutable reference data - runtime state is managed separately
+ */
+export interface RobotHandMetadata {
+  /** Unique identifier (e.g., "linker-l10-right") */
+  id: string
+
+  /** Display name (e.g., "Linker L10 Right Hand") */
+  name: string
+
+  /** Manufacturer/brand name (e.g., "Linker") */
+  brand: string
+
+  /** Model designation (e.g., "L10") */
+  model: string
+
+  /** Left or right hand */
+  handedness: Handedness
+
+  /** Path to original URDF file (for reference/debugging) */
+  urdfPath: string
+
+  /** Optional preview image path */
+  previewImage?: string
+
+  /** Base link name from URDF (root of the hand) */
+  baseLink: string
+
+  /** Finger data - not all hands have all fingers */
+  fingers: {
+    thumb?: FingerMetadata
+    index?: FingerMetadata
+    middle?: FingerMetadata
+    ring?: FingerMetadata
+    pinky?: FingerMetadata
+  }
+}
+
+/**
+ * Runtime joint state - combines metadata with current value
+ */
+export interface JointState {
+  /** Immutable metadata */
+  metadata: JointMetadata
+
+  /** Current joint angle (radians) or position (meters) */
+  currentValue: number
+}
+
+/**
+ * Runtime robot hand state - cloned from metadata for each instance
+ */
+export interface RobotHandState {
+  /** Reference to source metadata */
+  metadata: RobotHandMetadata
+
+  /** Map of joint name → joint state for fast lookup */
+  joints: Map<string, JointState>
 }

@@ -2,8 +2,25 @@
 
 import { OrbitControls, Grid, Text } from '@react-three/drei'
 import { RobotHandInterface } from '@/features/urdf/components/RobotHandInterface'
+import { MimicHand } from '@/features/urdf/components/MimicHand'
+import { RobotHandState } from '@/features/urdf/types'
+
+export interface HandModel {
+  modelId: string
+  scale: number
+  position: [number, number, number]
+  rotation: [number, number, number]
+  handState: RobotHandState
+}
 
 export function RobotScene() {
+  // Hand model configuration - synced across RobotHandInterface and MimicHand
+  const handModel: HandModel = {
+    modelId: 'linker-l10-right',
+    scale: 5,
+    position: [0, 0.5, 0],
+    rotation: [0, 0, 0],
+  }
   return (
     <>
       {/* Lighting */}
@@ -70,12 +87,9 @@ export function RobotScene() {
       </Text>
 
       {/* Robot Hand Interface - Linker L10 Right with Skeleton Overlay */}
-      <RobotHandInterface
-        modelId="linker-l10-right"
-        scale={5}
-        position={[0, 0.5, 0]}
-        rotation={[0, 0, 0]}
-      />
+      <RobotHandInterface handModel={handModel} />
+
+      <MimicHand handModel={handModel} />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls

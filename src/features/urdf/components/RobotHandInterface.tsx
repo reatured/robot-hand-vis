@@ -9,15 +9,18 @@ import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { loadURDF } from '../core/loader'
 import { TrackedHandModel } from './TrackedHandModel'
+import { HandModel } from '@/features/scene/components/RobotScene'
 
 interface RobotHandInterfaceProps {
-  /** Model ID to load (defaults to linker-l10-right) */
+  /** Hand model configuration object */
+  handModel?: HandModel
+  /** Model ID to load (defaults to linker-l10-right) - deprecated, use handModel */
   modelId?: string
-  /** Scale factor */
+  /** Scale factor - deprecated, use handModel */
   scale?: number
-  /** Position [x, y, z] */
+  /** Position [x, y, z] - deprecated, use handModel */
   position?: [number, number, number]
-  /** Rotation [x, y, z] in radians */
+  /** Rotation [x, y, z] in radians - deprecated, use handModel */
   rotation?: [number, number, number]
   /** Enable hand tracking rotation */
   useTracking?: boolean
@@ -28,14 +31,20 @@ interface RobotHandInterfaceProps {
 }
 
 export function RobotHandInterface({
-  modelId = 'linker-l10-right',
-  scale = 5,
-  position = [0, 0, 0],
-  rotation = [0, 0, 0],
+  handModel,
+  modelId: deprecatedModelId,
+  scale: deprecatedScale,
+  position: deprecatedPosition,
+  rotation: deprecatedRotation,
   useTracking = true,
   trackingHand = 'Right',
   smoothing = 0.3,
 }: RobotHandInterfaceProps) {
+  // Use handModel if provided, otherwise fall back to individual props
+  const modelId = handModel?.modelId ?? deprecatedModelId ?? 'linker-l10-right'
+  const scale = handModel?.scale ?? deprecatedScale ?? 5
+  const position = handModel?.position ?? deprecatedPosition ?? [0, 0, 0]
+  const rotation = handModel?.rotation ?? deprecatedRotation ?? [0, 0, 0]
   const [robot, setRobot] = useState<THREE.Group | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

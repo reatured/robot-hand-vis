@@ -25,13 +25,9 @@ export interface DebugState {
   /** All parsed joints from the loaded URDF */
   joints: UrdfJointInfo[]
 
-  /** Debug panel collapsed state */
-  isDebugPanelCollapsed: boolean
-
   /** Actions */
   setShowAxisLines: (show: boolean) => void
   setSelectedJoint: (jointName: string | null) => void
   setFingerFilter: (filter: FingerFilter) => void
   setJoints: (joints: UrdfJointInfo[]) => void
-  toggleDebugPanel: () => void
 }

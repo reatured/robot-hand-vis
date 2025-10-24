@@ -40,7 +40,7 @@ export const createUrdfSlice: StateCreator<UrdfSlice> = (set) => ({
     handState: null,
     isLoaded: false,
     isModelVisible: true,
-    isMimicHandVisible: false,
+    isMimicHandVisible: true,
   },
 
   setHandModel: (metadata, state) =>

@@ -12,7 +12,6 @@ export const createDebugSlice: StateCreator<DebugState> = (set) => ({
   selectedJointName: null,
   fingerFilter: 'all',
   joints: [],
-  isDebugPanelCollapsed: false, // Panel open by default
 
   // Actions
   setShowAxisLines: (show) =>
@@ -34,9 +33,4 @@ export const createDebugSlice: StateCreator<DebugState> = (set) => ({
     set({
       joints,
     }),
-
-  toggleDebugPanel: () =>
-    set((state) => ({
-      isDebugPanelCollapsed: !state.isDebugPanelCollapsed,
-    })),
 })

@@ -4,6 +4,7 @@ import { OrbitControls, Grid, Text } from '@react-three/drei'
 import { RobotHandInterface } from '@/features/urdf/components/RobotHandInterface'
 import { MimicHand } from '@/features/urdf/components/MimicHand'
 import { RobotHandState } from '@/features/urdf/types'
+import { IKDemo } from '@/features/ik/components/IKDemo'
 
 export interface HandModel {
   modelId: string
@@ -89,6 +90,9 @@ export function RobotScene() {
       <RobotHandInterface handModel={handModel} />
 
       <MimicHand handModel={handModel} />
+
+      {/* IK Demo */}
+      <IKDemo />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls

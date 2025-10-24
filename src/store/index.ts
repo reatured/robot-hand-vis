@@ -9,9 +9,10 @@ import { createDebugSlice } from '@/features/debug/store/debugSlice'
 import { DebugState } from '@/features/debug/types'
 import { createTrackingSlice, TrackingSlice } from '@/features/tracking/store/trackingSlice'
 import { createUrdfSlice, UrdfSlice } from '@/features/urdf/store/urdfSlice'
+import { createIKSlice, IKSlice } from '@/features/ik/store/ikSlice'
 
 // Combined store type
-type StoreState = DebugState & TrackingSlice & UrdfSlice // Add more slices as needed
+type StoreState = DebugState & TrackingSlice & UrdfSlice & IKSlice // Add more slices as needed
 
 /**
  * Main application store
@@ -22,6 +23,7 @@ export const useStore = create<StoreState>()(
       ...createDebugSlice(...a),
       ...createTrackingSlice(...a),
       ...createUrdfSlice(...a),
+      ...createIKSlice(...a),
     }),
     {
       name: 'robot-hand-vis-store',

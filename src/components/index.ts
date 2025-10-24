@@ -45,8 +45,14 @@ export { LandmarkOverlay } from '@/features/tracking/components/LandmarkOverlay'
 // export { TipTargets } from '@/features/fingertips/components/TipTargets'
 
 // ============================================================================
+// IK Feature (M5)
+// ============================================================================
+export { IKDemo } from '@/features/ik/components/IKDemo'
+
+// ============================================================================
 // Debug Feature (M6)
 // ============================================================================
+export { DebugPanel } from '@/features/debug/components/DebugPanel'
 // Will be available when implemented:
 // export { DebugAxes } from '@/features/debug/components/DebugAxes'
 // export { JointInfo } from '@/features/debug/components/JointInfo'

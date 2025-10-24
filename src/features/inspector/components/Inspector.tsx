@@ -13,6 +13,10 @@ export function Inspector() {
   const setModelVisible = useStore((state) => state.setModelVisible)
   const isMimicHandVisible = useStore((state) => state.urdf.isMimicHandVisible)
   const setMimicHandVisible = useStore((state) => state.setMimicHandVisible)
+  const isIKDemoVisible = useStore((state) => state.ik?.isIKDemoVisible ?? false)
+  const setIKDemoVisible = useStore((state) => state.setIKDemoVisible)
+
+  console.log('Inspector: IK state =', { isIKDemoVisible, hasSetFunction: !!setIKDemoVisible })
 
   return (
     <div className="fixed top-4 right-4 w-80 max-h-[calc(100vh-2rem)] overflow-y-auto z-30">
@@ -39,6 +43,18 @@ export function Inspector() {
               type="checkbox"
               checked={isMimicHandVisible}
               onChange={(e) => setMimicHandVisible(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <label htmlFor="ik-demo-visibility" className="text-sm text-gray-200">
+              IK Demo
+            </label>
+            <input
+              id="ik-demo-visibility"
+              type="checkbox"
+              checked={isIKDemoVisible}
+              onChange={(e) => setIKDemoVisible(e.target.checked)}
               className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
             />
           </div>

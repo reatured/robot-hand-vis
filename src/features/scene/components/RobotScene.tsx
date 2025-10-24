@@ -1,9 +1,18 @@
 'use client'
 
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 import { OrbitControls, Grid, Text } from '@react-three/drei'
 import { RobotHandInterface } from '@/features/urdf/components/RobotHandInterface'
 import { MimicHand } from '@/features/urdf/components/MimicHand'
 import { RobotHandState } from '@/features/urdf/types'
+import { useStore } from '@/store'
+import {
+  findTrackedHand,
+  calculateRotationFromHand,
+  applySmoothedRotation,
+} from '@/features/urdf/core/handWristRotation'
 
 export interface HandModel {
   modelId: string
@@ -20,6 +29,40 @@ export function RobotScene() {
     position: [0, 0.5, 0],
     rotation: [0, 0, 0],
   }
+
+  // Refs for hand rotation tracking
+  const handGroupRef = useRef<THREE.Group>(null)
+  const targetQuaternion = useRef(new THREE.Quaternion())
+
+  // Subscribe to hand tracking data
+  const trackingResults = useStore((state) => state.tracking.results)
+
+  // Hand tracking configuration
+  const trackingHand = 'Right'
+  const smoothing = 0.3
+
+  // Apply hand tracking rotation in real-time
+  useFrame(() => {
+    if (!handGroupRef.current || trackingResults.length === 0) {
+      return
+    }
+
+    // Find the hand to track
+    const trackedHand = findTrackedHand(trackingResults, trackingHand)
+    if (!trackedHand) return
+
+    // Calculate pure tracking rotation from hand landmarks (wrist → middle finger root)
+    // Note: Not passing baseRotation to avoid amplification - base rotation is handled by handModel
+    const rotationQuat = calculateRotationFromHand(trackedHand)
+    if (!rotationQuat) return
+
+    // Store target rotation
+    targetQuaternion.current.copy(rotationQuat)
+
+    // Apply with smoothing
+    applySmoothedRotation(handGroupRef.current.quaternion, targetQuaternion.current, smoothing)
+  })
+
   return (
     <>
       {/* Lighting */}
@@ -85,10 +128,11 @@ export function RobotScene() {
         RIGHT
       </Text>
 
-      {/* Robot Hand Interface - Linker L10 Right with Skeleton Overlay */}
-      <RobotHandInterface handModel={handModel} />
+      {/* Robot Hand Interface - Linker L10 Right with hand tracking rotation */}
+      <group ref={handGroupRef}>
+        <RobotHandInterface handModel={handModel} />
+      </group>
 
-      <MimicHand handModel={handModel} />
 
       {/* Orbit controls for camera interaction */}
       <OrbitControls

@@ -47,6 +47,7 @@ export { LandmarkOverlay } from '@/features/tracking/components/LandmarkOverlay'
 // ============================================================================
 // Debug Feature (M6)
 // ============================================================================
+export { DebugPanel } from '@/features/debug/components/DebugPanel'
 // Will be available when implemented:
 // export { DebugAxes } from '@/features/debug/components/DebugAxes'
 // export { JointInfo } from '@/features/debug/components/JointInfo'

@@ -22,6 +22,10 @@ const Inspector = dynamic(() => import('@/components').then((mod) => mod.Inspect
   ssr: false,
 })
 
+const DebugPanel = dynamic(() => import('@/components').then((mod) => mod.DebugPanel), {
+  ssr: false,
+})
+
 export default function PageContent() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
@@ -40,6 +44,10 @@ export default function PageContent() {
         <Inspector />
       </Suspense>
 
+      {/* Debug Panel - Left bottom */}
+      <Suspense fallback={null}>
+        <DebugPanel />
+      </Suspense>
 
     </div>
   )

@@ -140,16 +140,19 @@ export function RobotHandInterface({
   }
 
   // If tracking is enabled, use TrackedHandModel
+  // Wrap in group with base rotation since tracking rotation is applied externally
   if (useTracking) {
     return (
-      <TrackedHandModel
-        model={robot}
-        trackingHand={trackingHand}
-        smoothing={smoothing}
-        baseRotation={new THREE.Euler(...rotation)}
-        position={position}
-        scale={scale}
-      />
+      <group position={position} rotation={rotation} scale={scale}>
+        <TrackedHandModel
+          model={robot}
+          trackingHand={trackingHand}
+          smoothing={smoothing}
+          baseRotation={new THREE.Euler(...rotation)}
+          position={[0, 0, 0]}
+          scale={1}
+        />
+      </group>
     )
   }
 

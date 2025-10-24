@@ -25,6 +25,11 @@ export function DemoScene() {
   // Get hand metadata from store
   const handMetadata = useStore((state) => state.urdf.handMetadata)
 
+  // Get endpoint position and rotation from store
+  const endpointPosition = useStore((state) => state.ik?.endpointPosition ?? { x: 0, y: 0, z: 0.5 })
+  const endpointRotation = useStore((state) => state.ik?.endpointRotation ?? { x: 0, y: 0, z: 0 })
+  const setEndpointPosition = useStore((state) => state.setEndpointPosition)
+
   // Bone chain refs and state
   const boneGroupRef = useRef<THREE.Group>(null)
   const ikSolverRef = useRef<CCDIKSolver | null>(null)
@@ -34,7 +39,6 @@ export function DemoScene() {
 
   const [isDragging, setIsDragging] = useState(false)
   const [isSetupComplete, setIsSetupComplete] = useState(false)
-  const [controlMode, setControlMode] = useState<'translate' | 'rotate'>('translate')
 
   // Setup bone structure from zustand store
   useEffect(() => {
@@ -104,6 +108,18 @@ export function DemoScene() {
       console.log(`Bone ${i} (${bone.name}): [${worldPos.x.toFixed(4)}, ${worldPos.y.toFixed(4)}, ${worldPos.z.toFixed(4)}]`)
     })
 
+    // Calculate index finger tip position and initialize endpoint
+    const tipBone = bones[bones.length - 1] // Last bone is the fingertip
+    const tipWorldPos = new THREE.Vector3()
+    tipBone.getWorldPosition(tipWorldPos)
+
+    console.log('=== INITIALIZING ENDPOINT ===')
+    console.log(`Index finger tip world position: [${tipWorldPos.x.toFixed(4)}, ${tipWorldPos.y.toFixed(4)}, ${tipWorldPos.z.toFixed(4)}]`)
+
+    // Set the endpoint position to the fingertip
+    setEndpointPosition(tipWorldPos.x, tipWorldPos.y, tipWorldPos.z)
+    console.log('Endpoint initialized at fingertip position')
+
     setIsSetupComplete(true)
 
     // Cleanup
@@ -113,37 +129,6 @@ export function DemoScene() {
       setIsSetupComplete(false)
     }
   }, [handMetadata])
-
-  // Update last bone based on target mesh position and rotation
-  useFrame(() => {
-    if (!isSetupComplete || !targetMeshRef.current || bonesRef.current.length === 0) {
-      return
-    }
-
-    const lastBone = bonesRef.current[bonesRef.current.length - 1]
-    if (!lastBone || !boneGroupRef.current) return
-
-    // Get target mesh world position and rotation
-    const worldPos = new THREE.Vector3()
-    const worldQuat = new THREE.Quaternion()
-    targetMeshRef.current.getWorldPosition(worldPos)
-    targetMeshRef.current.getWorldQuaternion(worldQuat)
-
-    // Convert to bone group's local space
-    boneGroupRef.current.worldToLocal(worldPos)
-
-    // Convert world quaternion to local
-    const groupWorldQuat = new THREE.Quaternion()
-    boneGroupRef.current.getWorldQuaternion(groupWorldQuat)
-    const localQuat = groupWorldQuat.clone().invert().multiply(worldQuat)
-
-    // Update last bone's position and rotation
-    lastBone.position.copy(worldPos)
-    lastBone.quaternion.copy(localQuat)
-
-    // Update matrices
-    lastBone.updateMatrixWorld(true)
-  })
 
   return (
     <>
@@ -174,67 +159,19 @@ export function DemoScene() {
           </>
         )}
 
-        {/* Target mesh for last bone - draggable control */}
-        {isSetupComplete && bonesRef.current.length > 0 && (
-          <>
-            {(() => {
-              const lastBone = bonesRef.current[bonesRef.current.length - 1]
-              const position = new THREE.Vector3()
-              lastBone.getWorldPosition(position)
-
-              return (
-                <mesh ref={targetMeshRef} position={position}>
-                  <sphereGeometry args={[0.015, 16, 16]} />
-                  <meshStandardMaterial
-                    color={isDragging ? '#ff6b6b' : '#ffff00'}
-                    emissive={isDragging ? '#ff0000' : '#ffaa00'}
-                    emissiveIntensity={0.7}
-                  />
-                </mesh>
-              )
-            })()}
-
-            {/* Transform controls for position and rotation */}
-            <TransformControls
-              object={targetMeshRef.current}
-              mode={controlMode}
-              onMouseDown={() => setIsDragging(true)}
-              onMouseUp={() => setIsDragging(false)}
-            />
-          </>
-        )}
+        {/* Endpoint Target Cube */}
+        <mesh
+          position={[endpointPosition.x, endpointPosition.y, endpointPosition.z]}
+          rotation={[endpointRotation.x, endpointRotation.y, endpointRotation.z]}
+        >
+          <boxGeometry args={[0.05, 0.05, 0.15]} />
+          <meshStandardMaterial
+            color="#ff00ff"
+            emissive="#ff00ff"
+            emissiveIntensity={0.8}
+          />
+        </mesh>
       </group>
-
-      {/* Control mode toggle UI */}
-      {isSetupComplete && (
-        <group position={[0, 2, 0]}>
-          {/* Translate button */}
-          <mesh
-            position={[-0.3, 0, 0]}
-            onClick={() => setControlMode('translate')}
-          >
-            <boxGeometry args={[0.25, 0.1, 0.05]} />
-            <meshStandardMaterial
-              color={controlMode === 'translate' ? '#00ff00' : '#666666'}
-              emissive={controlMode === 'translate' ? '#00ff00' : '#000000'}
-              emissiveIntensity={0.5}
-            />
-          </mesh>
-
-          {/* Rotate button */}
-          <mesh
-            position={[0.3, 0, 0]}
-            onClick={() => setControlMode('rotate')}
-          >
-            <boxGeometry args={[0.25, 0.1, 0.05]} />
-            <meshStandardMaterial
-              color={controlMode === 'rotate' ? '#00ff00' : '#666666'}
-              emissive={controlMode === 'rotate' ? '#00ff00' : '#000000'}
-              emissiveIntensity={0.5}
-            />
-          </mesh>
-        </group>
-      )}
     </>
   )
 }
